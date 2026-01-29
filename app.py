@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from paddleocr import PaddleOCR
 import base64
 import io
@@ -7,12 +8,16 @@ import os
 
 app = Flask(__name__)
 
+# 啟用 CORS，允許所有來源訪問
+CORS(app)
+
 print("正在初始化 PaddleOCR...")
 ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False)
 print("PaddleOCR 初始化完成！")
 
 @app.route('/', methods=['GET'])
 def home():
+    """首頁，顯示服務狀態"""
     return jsonify({
         "service": "PaddleOCR API",
         "status": "running",
@@ -25,18 +30,26 @@ def home():
 
 @app.route('/health', methods=['GET'])
 def health():
+    """健康檢查接口"""
     return jsonify({"status": "ok"})
 
-@app.route('/ocr', methods=['POST'])
+@app.route('/ocr', methods=['POST', 'OPTIONS'])
 def ocr_image():
+    """OCR 識別接口"""
+    # 處理 OPTIONS 預檢請求
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
+        # 檢查是否有上傳的文件
         if 'file' in request.files:
             file = request.files['file']
             image = Image.open(file.stream)
             temp_path = '/tmp/temp_image.jpg'
             image.save(temp_path)
         
-        elif 'image' in request.json:
+        # 或者接收 base64 編碼的圖片
+        elif request.json and 'image' in request.json:
             image_data = base64.b64decode(request.json['image'])
             image = Image.open(io.BytesIO(image_data))
             temp_path = '/tmp/temp_image.jpg'
@@ -48,9 +61,11 @@ def ocr_image():
                 'error': '請上傳圖片文件或提供 base64 圖片數據'
             }), 400
         
+        # 執行 OCR 識別
         print(f"正在識別圖片: {temp_path}")
         result = ocr.ocr(temp_path, cls=True)
         
+        # 格式化結果
         texts = []
         if result and result[0]:
             for line in result[0]:
@@ -60,6 +75,7 @@ def ocr_image():
                     'box': line[0]
                 })
         
+        # 清理臨時文件
         if os.path.exists(temp_path):
             os.remove(temp_path)
         
