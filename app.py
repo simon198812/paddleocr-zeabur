@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)
 
 print("正在初始化 PaddleOCR...")
-ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False)
+ocr = PaddleOCR(use_angle_cls=True, lang='chinese_cht', use_gpu=False)
 print("PaddleOCR 初始化完成！")
 
 @app.route('/', methods=['GET'])
@@ -96,3 +96,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"服務啟動在端口: {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
+
